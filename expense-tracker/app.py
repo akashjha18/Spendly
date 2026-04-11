@@ -65,12 +65,24 @@ def login():
 
 @app.route("/logout")
 def logout():
-    return "Logout — coming in Step 3"
+    session.clear()
+    return redirect(url_for("landing"))
 
 
 @app.route("/profile")
 def profile():
-    return "Profile page — coming in Step 4"
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+    db.close()
+
+    if not user:
+        session.clear()
+        return redirect(url_for("login"))
+
+    return render_template("profile.html", user=user)
 
 
 @app.route("/expenses/add")
