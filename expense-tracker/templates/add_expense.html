@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Add Expense — Spendly{% endblock %}
+
+{% block content %}
+
+<div class="form-section">
+    <div class="form-container">
+        <div class="form-header">
+            <h1>Add New Expense</h1>
+            <p class="form-subtitle">Track your spending</p>
+        </div>
+
+        <form method="POST" class="expense-form">
+            {% if errors %}
+                <div class="form-errors">
+                    {% for error in errors %}
+                        <div class="error-message">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label for="amount">Amount (₹)</label>
+                <input type="number" id="amount" name="amount" step="0.01" min="0"
+                       placeholder="0.00" required
+                       value="{{ request.form.get('amount', '') or amount or '' }}"
+                       class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label for="date">Date</label>
+                <input type="date" id="date" name="date" required
+                       value="{{ request.form.get('date', '') or date or '' }}"
+                       class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description (Optional)</label>
+                <input type="text" id="description" name="description"
+                       placeholder="Coffee, groceries, fuel, etc."
+                       value="{{ request.form.get('description', '') or description or '' }}"
+                       class="form-input">
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-submit">Add Expense</button>
+                <a href="{{ url_for('expenses') }}" class="btn-cancel">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .form-section {
+        min-height: calc(100vh - 60px - 100px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+    }
+
+    .form-container {
+        width: 100%;
+        max-width: 440px;
+    }
+
+    .form-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .form-header h1 {
+        font-family: var(--font-display);
+        font-size: 2rem;
+        color: var(--ink);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-subtitle {
+        color: var(--ink-muted);
+        font-size: 0.95rem;
+    }
+
+    .expense-form {
+        background: var(--paper-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 2rem;
+    }
+
+    .form-errors {
+        background: var(--danger-light);
+        border: 1px solid #f5c6c2;
+        border-radius: var(--radius-sm);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .error-message {
+        color: var(--danger);
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .error-message:last-child {
+        margin-bottom: 0;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--ink-soft);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.7rem 0.875rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-family: var(--font-body);
+        font-size: 0.95rem;
+        color: var(--ink);
+        background: var(--paper);
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .form-input:focus {
+        border-color: var(--accent);
+    }
+
+    .form-input::placeholder {
+        color: var(--ink-faint);
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn-submit {
+        flex: 1;
+        padding: 0.7rem;
+        background: var(--ink);
+        color: var(--paper);
+        border: none;
+        border-radius: var(--radius-sm);
+        font-family: var(--font-body);
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-submit:hover {
+        background: var(--accent);
+    }
+
+    .btn-cancel {
+        flex: 1;
+        padding: 0.7rem;
+        background: transparent;
+        color: var(--ink-soft);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-family: var(--font-body);
+        font-size: 0.95rem;
+        font-weight: 500;
+        text-align: center;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: inline-block;
+    }
+
+    .btn-cancel:hover {
+        border-color: var(--ink);
+        color: var(--ink);
+        background: var(--paper-warm);
+    }
+
+    @media (max-width: 600px) {
+        .form-section {
+            padding: 1rem;
+        }
+
+        .form-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .expense-form {
+            padding: 1.5rem;
+        }
+    }
+</style>
+
+{% endblock %}

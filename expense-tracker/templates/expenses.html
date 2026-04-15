@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block title %}Expenses — Spendly{% endblock %}
+
+{% block content %}
+
+<div class="expenses-container">
+    <div class="expenses-header">
+        <div class="expenses-title-section">
+            <h1>Your Expenses</h1>
+            <p class="expenses-user">{{ user['name'] }}</p>
+        </div>
+        <a href="{{ url_for('add_expense') }}" class="btn-primary">+ Add Expense</a>
+    </div>
+
+    <div class="expenses-summary">
+        <div class="summary-card">
+            <span class="summary-label">Total Spending</span>
+            <span class="summary-value">₹{{ "%.2f"|format(total_spent) }}</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-label">Transactions</span>
+            <span class="summary-value">{{ expenses|length }}</span>
+        </div>
+    </div>
+
+    <div class="expenses-list">
+        {% if expenses %}
+            <table class="expenses-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th class="amount-col">Amount</th>
+                        <th class="actions-col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for expense in expenses %}
+                    <tr class="expense-row">
+                        <td class="date-cell">{{ expense['date'] }}</td>
+                        <td class="desc-cell">{{ expense['description'] or '—' }}</td>
+                        <td class="amount-cell">₹{{ "%.2f"|format(expense['amount']) }}</td>
+                        <td class="actions-cell">
+                            <a href="{{ url_for('edit_expense', id=expense['id']) }}" class="btn-row-edit">Edit</a>
+                            <form method="POST" action="{{ url_for('delete_expense', id=expense['id']) }}" style="display: inline;"
+                                  onsubmit="return confirm('Delete this expense?')">
+                                <button type="submit" class="btn-row-delete">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="empty-state">
+                <p class="empty-title">No expenses yet</p>
+                <p class="empty-text">Start tracking your spending by adding your first expense.</p>
+                <a href="{{ url_for('add_expense') }}" class="btn-primary">Add Your First Expense</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .expenses-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .expenses-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+        gap: 1rem;
+    }
+
+    .expenses-title-section h1 {
+        font-family: var(--font-display);
+        font-size: 2rem;
+        color: var(--ink);
+        margin-bottom: 0.5rem;
+    }
+
+    .expenses-user {
+        color: var(--ink-muted);
+        font-size: 0.95rem;
+    }
+
+    .expenses-summary {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .summary-card {
+        background: var(--paper-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .summary-label {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--ink-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .summary-value {
+        font-family: var(--font-display);
+        font-size: 1.75rem;
+        color: var(--ink);
+    }
+
+    .expenses-list {
+        background: var(--paper-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+    }
+
+    .expenses-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .expenses-table thead {
+        background: var(--paper-warm);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .expenses-table th {
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--ink-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .amount-col { text-align: right; }
+    .actions-col { text-align: center; }
+
+    .expense-row {
+        border-bottom: 1px solid var(--border-soft);
+        transition: background 0.2s;
+    }
+
+    .expense-row:hover { background: var(--paper-warm); }
+
+    .expense-row td {
+        padding: 1rem;
+        font-size: 0.95rem;
+        color: var(--ink);
+    }
+
+    .date-cell {
+        font-weight: 500;
+        color: var(--ink-soft);
+        white-space: nowrap;
+    }
+
+    .desc-cell { color: var(--ink-muted); }
+
+    .amount-cell {
+        text-align: right;
+        font-weight: 500;
+        color: var(--accent);
+    }
+
+    .actions-cell {
+        text-align: center;
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+
+    .btn-row-edit,
+    .btn-row-delete {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: transparent;
+        transition: all 0.2s;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-row-edit {
+        color: var(--accent);
+        border-color: var(--accent-light);
+        background: var(--accent-light);
+    }
+
+    .btn-row-edit:hover {
+        background: var(--accent);
+        color: var(--paper);
+        border-color: var(--accent);
+    }
+
+    .btn-row-delete {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--danger-light);
+        background: var(--danger-light);
+        color: var(--danger);
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: var(--font-body);
+        font-weight: 500;
+    }
+
+    .btn-row-delete:hover {
+        background: var(--danger);
+        color: var(--paper);
+        border-color: var(--danger);
+    }
+
+    .empty-state {
+        padding: 3rem 2rem;
+        text-align: center;
+    }
+
+    .empty-title {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        color: var(--ink);
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-text {
+        color: var(--ink-muted);
+        margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 600px) {
+        .expenses-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .btn-primary {
+            width: 100%;
+            text-align: center;
+        }
+
+        .expenses-summary {
+            grid-template-columns: 1fr;
+        }
+
+        .expenses-table {
+            font-size: 0.85rem;
+        }
+
+        .expenses-table th,
+        .expense-row td {
+            padding: 0.75rem 0.5rem;
+        }
+
+        .actions-cell {
+            flex-direction: column;
+        }
+
+        .btn-row-edit,
+        .btn-row-delete {
+            width: 100%;
+        }
+    }
+</style>
+
+{% endblock %}

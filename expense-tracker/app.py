@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import get_db, init_db, seed_db
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key_here"  # Change this to a random secret in production
@@ -85,19 +86,145 @@ def profile():
     return render_template("profile.html", user=user)
 
 
-@app.route("/expenses/add")
+@app.route("/expenses")
+def expenses():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+    expenses_list = db.execute("SELECT * FROM expenses WHERE user_id = ? ORDER BY date DESC", (session["user_id"],)).fetchall()
+    db.close()
+
+    if not user:
+        session.clear()
+        return redirect(url_for("login"))
+
+    # Calculate total spending
+    total_spent = sum(exp["amount"] for exp in expenses_list)
+
+    return render_template("expenses.html", user=user, expenses=expenses_list, total_spent=total_spent)
+
+
+@app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
-    return "Add expense — coming in Step 7"
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        amount = request.form.get("amount", "").strip()
+        description = request.form.get("description", "").strip()
+        date = request.form.get("date", "").strip()
+
+        # Validation
+        errors = []
+        if not amount:
+            errors.append("Amount is required")
+        else:
+            try:
+                amount = float(amount)
+                if amount <= 0:
+                    errors.append("Amount must be greater than 0")
+            except ValueError:
+                errors.append("Amount must be a valid number")
+
+        if not date:
+            errors.append("Date is required")
+        else:
+            try:
+                datetime.strptime(date, "%Y-%m-%d")
+            except ValueError:
+                errors.append("Date must be in YYYY-MM-DD format")
+
+        if errors:
+            return render_template("add_expense.html", errors=errors,
+                                 amount=amount, description=description, date=date)
+
+        # Insert into database
+        db = get_db()
+        db.execute("INSERT INTO expenses (user_id, amount, description, date) VALUES (?, ?, ?, ?)",
+                  (session["user_id"], amount, description, date))
+        db.commit()
+        db.close()
+
+        return redirect(url_for("expenses"))
+
+    # GET request - show form with today's date as default
+    today = datetime.now().strftime("%Y-%m-%d")
+    return render_template("add_expense.html", date=today)
 
 
-@app.route("/expenses/<int:id>/edit")
+@app.route("/expenses/<int:id>/edit", methods=["GET", "POST"])
 def edit_expense(id):
-    return "Edit expense — coming in Step 8"
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    db = get_db()
+    expense = db.execute("SELECT * FROM expenses WHERE id = ? AND user_id = ?",
+                        (id, session["user_id"])).fetchone()
+
+    if not expense:
+        db.close()
+        return redirect(url_for("expenses"))
+
+    if request.method == "POST":
+        amount = request.form.get("amount", "").strip()
+        description = request.form.get("description", "").strip()
+        date = request.form.get("date", "").strip()
+
+        # Validation
+        errors = []
+        if not amount:
+            errors.append("Amount is required")
+        else:
+            try:
+                amount = float(amount)
+                if amount <= 0:
+                    errors.append("Amount must be greater than 0")
+            except ValueError:
+                errors.append("Amount must be a valid number")
+
+        if not date:
+            errors.append("Date is required")
+        else:
+            try:
+                datetime.strptime(date, "%Y-%m-%d")
+            except ValueError:
+                errors.append("Date must be in YYYY-MM-DD format")
+
+        if errors:
+            db.close()
+            return render_template("edit_expense.html", expense=expense, errors=errors,
+                                 amount=amount, description=description, date=date)
+
+        # Update database
+        db.execute("UPDATE expenses SET amount = ?, description = ?, date = ? WHERE id = ?",
+                  (amount, description, date, id))
+        db.commit()
+        db.close()
+
+        return redirect(url_for("expenses"))
+
+    db.close()
+    return render_template("edit_expense.html", expense=expense)
 
 
-@app.route("/expenses/<int:id>/delete")
+@app.route("/expenses/<int:id>/delete", methods=["POST"])
 def delete_expense(id):
-    return "Delete expense — coming in Step 9"
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    db = get_db()
+    # Verify expense belongs to user before deleting
+    expense = db.execute("SELECT * FROM expenses WHERE id = ? AND user_id = ?",
+                        (id, session["user_id"])).fetchone()
+
+    if expense:
+        db.execute("DELETE FROM expenses WHERE id = ?", (id,))
+        db.commit()
+
+    db.close()
+    return redirect(url_for("expenses"))
 
 
 if __name__ == "__main__":
