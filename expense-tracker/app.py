@@ -93,7 +93,12 @@ def expenses():
 
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
-    expenses_list = db.execute("SELECT * FROM expenses WHERE user_id = ? ORDER BY date DESC", (session["user_id"],)).fetchall()
+    expenses_list = db.execute("""
+        SELECT e.*, c.name as category_name, c.color as category_color 
+        FROM expenses e 
+        LEFT JOIN categories c ON e.category_id = c.id 
+        WHERE e.user_id = ? ORDER BY e.date DESC
+    """, (session["user_id"],)).fetchall()
     db.close()
 
     if not user:
@@ -111,10 +116,15 @@ def add_expense():
     if "user_id" not in session:
         return redirect(url_for("login"))
 
+    db = get_db()
+    categories = db.execute("SELECT * FROM categories ORDER BY name").fetchall()
+    db.close()
+
     if request.method == "POST":
         amount = request.form.get("amount", "").strip()
         description = request.form.get("description", "").strip()
         date = request.form.get("date", "").strip()
+        category_id = request.form.get("category_id", "").strip()
 
         # Validation
         errors = []
@@ -136,14 +146,23 @@ def add_expense():
             except ValueError:
                 errors.append("Date must be in YYYY-MM-DD format")
 
+        if not category_id:
+            errors.append("Category is required")
+        else:
+            try:
+                category_id = int(category_id)
+            except ValueError:
+                errors.append("Invalid category")
+
         if errors:
             return render_template("add_expense.html", errors=errors,
-                                 amount=amount, description=description, date=date)
+                                 amount=amount, description=description, date=date, 
+                                 category_id=category_id, categories=categories)
 
         # Insert into database
         db = get_db()
-        db.execute("INSERT INTO expenses (user_id, amount, description, date) VALUES (?, ?, ?, ?)",
-                  (session["user_id"], amount, description, date))
+        db.execute("INSERT INTO expenses (user_id, category_id, amount, description, date) VALUES (?, ?, ?, ?, ?)",
+                  (session["user_id"], category_id, amount, description, date))
         db.commit()
         db.close()
 
@@ -151,7 +170,7 @@ def add_expense():
 
     # GET request - show form with today's date as default
     today = datetime.now().strftime("%Y-%m-%d")
-    return render_template("add_expense.html", date=today)
+    return render_template("add_expense.html", date=today, categories=categories)
 
 
 @app.route("/expenses/<int:id>/edit", methods=["GET", "POST"])
@@ -167,10 +186,13 @@ def edit_expense(id):
         db.close()
         return redirect(url_for("expenses"))
 
+    categories = db.execute("SELECT * FROM categories ORDER BY name").fetchall()
+
     if request.method == "POST":
         amount = request.form.get("amount", "").strip()
         description = request.form.get("description", "").strip()
         date = request.form.get("date", "").strip()
+        category_id = request.form.get("category_id", "").strip()
 
         # Validation
         errors = []
@@ -192,21 +214,30 @@ def edit_expense(id):
             except ValueError:
                 errors.append("Date must be in YYYY-MM-DD format")
 
+        if not category_id:
+            errors.append("Category is required")
+        else:
+            try:
+                category_id = int(category_id)
+            except ValueError:
+                errors.append("Invalid category")
+
         if errors:
             db.close()
             return render_template("edit_expense.html", expense=expense, errors=errors,
-                                 amount=amount, description=description, date=date)
+                                 amount=amount, description=description, date=date,
+                                 category_id=category_id, categories=categories)
 
         # Update database
-        db.execute("UPDATE expenses SET amount = ?, description = ?, date = ? WHERE id = ?",
-                  (amount, description, date, id))
+        db.execute("UPDATE expenses SET category_id = ?, amount = ?, description = ?, date = ? WHERE id = ?",
+                  (category_id, amount, description, date, id))
         db.commit()
         db.close()
 
         return redirect(url_for("expenses"))
 
     db.close()
-    return render_template("edit_expense.html", expense=expense)
+    return render_template("edit_expense.html", expense=expense, categories=categories)
 
 
 @app.route("/expenses/<int:id>/delete", methods=["POST"])

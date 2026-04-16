@@ -31,6 +31,7 @@
                     <tr>
                         <th>Date</th>
                         <th>Description</th>
+                        <th>Category</th>
                         <th class="amount-col">Amount</th>
                         <th class="actions-col">Actions</th>
                     </tr>
@@ -40,6 +41,15 @@
                     <tr class="expense-row">
                         <td class="date-cell">{{ expense['date'] }}</td>
                         <td class="desc-cell">{{ expense['description'] or '—' }}</td>
+                        <td class="category-cell">
+                            {% if expense['category_name'] %}
+                                <span class="category-badge" style="background-color: {{ expense['category_color'] }};">
+                                    {{ expense['category_name'] }}
+                                </span>
+                            {% else %}
+                                <span class="category-badge category-uncategorized">Uncategorized</span>
+                            {% endif %}
+                        </td>
                         <td class="amount-cell">₹{{ "%.2f"|format(expense['amount']) }}</td>
                         <td class="actions-cell">
                             <a href="{{ url_for('edit_expense', id=expense['id']) }}" class="btn-row-edit">Edit</a>
@@ -226,6 +236,25 @@
         background: var(--danger);
         color: var(--paper);
         border-color: var(--danger);
+    }
+
+    .category-cell {
+        text-align: center;
+    }
+
+    .category-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .category-uncategorized {
+        background-color: var(--ink-muted);
     }
 
     .empty-state {
