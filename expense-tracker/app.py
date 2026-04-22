@@ -93,12 +93,39 @@ def expenses():
 
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
-    expenses_list = db.execute("""
+    
+    # Get filter parameters
+    date_from = request.args.get('date_from', '').strip()
+    date_to = request.args.get('date_to', '').strip()
+    category_id = request.args.get('category', '').strip()
+    search = request.args.get('search', '').strip()
+    
+    # Build query with filters
+    query = """
         SELECT e.*, c.name as category_name, c.color as category_color 
         FROM expenses e 
         LEFT JOIN categories c ON e.category_id = c.id 
-        WHERE e.user_id = ? ORDER BY e.date DESC
-    """, (session["user_id"],)).fetchall()
+        WHERE e.user_id = ?
+    """
+    params = [session["user_id"]]
+    
+    if date_from:
+        query += " AND e.date >= ?"
+        params.append(date_from)
+    if date_to:
+        query += " AND e.date <= ?"
+        params.append(date_to)
+    if category_id:
+        query += " AND e.category_id = ?"
+        params.append(category_id)
+    if search:
+        query += " AND e.description LIKE ?"
+        params.append(f"%{search}%")
+    
+    query += " ORDER BY e.date DESC"
+    
+    expenses_list = db.execute(query, params).fetchall()
+    categories = db.execute("SELECT * FROM categories ORDER BY name").fetchall()
     db.close()
 
     if not user:
@@ -108,7 +135,8 @@ def expenses():
     # Calculate total spending
     total_spent = sum(exp["amount"] for exp in expenses_list)
 
-    return render_template("expenses.html", user=user, expenses=expenses_list, total_spent=total_spent)
+    return render_template("expenses.html", user=user, expenses=expenses_list, 
+                         total_spent=total_spent, categories=categories)
 
 
 @app.route("/expenses/add", methods=["GET", "POST"])

@@ -24,6 +24,44 @@
         </div>
     </div>
 
+    <!-- Filter Form -->
+    <div class="filters-section">
+        <form method="GET" class="filters-form">
+            <div class="filter-group">
+                <label for="date_from">From Date</label>
+                <input type="date" id="date_from" name="date_from" 
+                       value="{{ request.args.get('date_from', '') }}" class="filter-input">
+            </div>
+            <div class="filter-group">
+                <label for="date_to">To Date</label>
+                <input type="date" id="date_to" name="date_to" 
+                       value="{{ request.args.get('date_to', '') }}" class="filter-input">
+            </div>
+            <div class="filter-group">
+                <label for="category">Category</label>
+                <select id="category" name="category" class="filter-input">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.id }}" 
+                                {% if request.args.get('category', '') == cat.id|string %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="search">Search Description</label>
+                <input type="text" id="search" name="search" 
+                       placeholder="Search expenses..."
+                       value="{{ request.args.get('search', '') }}" class="filter-input">
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="btn-filter">Filter</button>
+                <a href="{{ url_for('expenses') }}" class="btn-clear">Clear Filters</a>
+            </div>
+        </form>
+    </div>
+
     <div class="expenses-list">
         {% if expenses %}
             <table class="expenses-table">
@@ -255,6 +293,88 @@
 
     .category-uncategorized {
         background-color: var(--ink-muted);
+    }
+
+    .filters-section {
+        background: var(--paper-card);
+        border-radius: var(--radius-md);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-soft);
+    }
+
+    .filters-form {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        align-items: end;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .filter-group label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--ink-soft);
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .filter-input {
+        padding: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-size: 0.95rem;
+        background: var(--paper);
+        color: var(--ink);
+        transition: border-color 0.2s;
+    }
+
+    .filter-input:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: end;
+    }
+
+    .btn-filter {
+        padding: 0.75rem 1.5rem;
+        background: var(--accent);
+        color: var(--paper);
+        border: none;
+        border-radius: var(--radius-sm);
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-filter:hover {
+        background: var(--accent-dark);
+    }
+
+    .btn-clear {
+        padding: 0.75rem 1.5rem;
+        background: transparent;
+        color: var(--ink-muted);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s;
+        display: inline-block;
+    }
+
+    .btn-clear:hover {
+        background: var(--paper-warm);
+        border-color: var(--border);
     }
 
     .empty-state {
