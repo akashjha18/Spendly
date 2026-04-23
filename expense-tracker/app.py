@@ -268,22 +268,63 @@ def edit_expense(id):
     return render_template("edit_expense.html", expense=expense, categories=categories)
 
 
-@app.route("/expenses/<int:id>/delete", methods=["POST"])
-def delete_expense(id):
+@app.route("/reports")
+def reports():
     if "user_id" not in session:
         return redirect(url_for("login"))
 
     db = get_db()
-    # Verify expense belongs to user before deleting
-    expense = db.execute("SELECT * FROM expenses WHERE id = ? AND user_id = ?",
-                        (id, session["user_id"])).fetchone()
+    user = db.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+    
+    if not user:
+        session.clear()
+        return redirect(url_for("login"))
 
-    if expense:
-        db.execute("DELETE FROM expenses WHERE id = ?", (id,))
-        db.commit()
+    # Get spending by category
+    category_spending = db.execute("""
+        SELECT c.name as category, c.color, SUM(e.amount) as total
+        FROM expenses e
+        JOIN categories c ON e.category_id = c.id
+        WHERE e.user_id = ?
+        GROUP BY c.id, c.name, c.color
+        ORDER BY total DESC
+    """, (session["user_id"],)).fetchall()
+
+    # Get spending over time (last 30 days)
+    from datetime import datetime, timedelta
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=30)
+    
+    daily_spending = db.execute("""
+        SELECT date, SUM(amount) as total
+        FROM expenses
+        WHERE user_id = ? AND date >= ? AND date <= ?
+        GROUP BY date
+        ORDER BY date
+    """, (session["user_id"], str(start_date), str(end_date))).fetchall()
+
+    # Get monthly spending (last 12 months)
+    monthly_spending = db.execute("""
+        SELECT strftime('%Y-%m', date) as month, SUM(amount) as total
+        FROM expenses
+        WHERE user_id = ?
+        GROUP BY strftime('%Y-%m', date)
+        ORDER BY month DESC
+        LIMIT 12
+    """, (session["user_id"],)).fetchall()
 
     db.close()
-    return redirect(url_for("expenses"))
+
+    # Convert Row objects to dictionaries for JSON serialization
+    category_spending = [dict(row) for row in category_spending]
+    daily_spending = [dict(row) for row in daily_spending]
+    monthly_spending = [dict(row) for row in monthly_spending]
+
+    return render_template("reports.html", 
+                         user=user,
+                         category_spending=category_spending,
+                         daily_spending=daily_spending,
+                         monthly_spending=monthly_spending)
 
 
 if __name__ == "__main__":

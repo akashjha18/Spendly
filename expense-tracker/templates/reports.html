@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Reports — Spendly{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<div class="reports-container">
+    <div class="reports-header">
+        <h1>Spending Reports</h1>
+        <p class="reports-subtitle">Visual insights into your spending patterns</p>
+    </div>
+
+    <div class="reports-grid">
+        <!-- Category Breakdown -->
+        <div class="report-card">
+            <div class="report-card-header">
+                <h3>Spending by Category</h3>
+                <p>Breakdown of your expenses by category</p>
+            </div>
+            <div class="chart-container">
+                <canvas id="categoryChart" width="300" height="300"></canvas>
+            </div>
+        </div>
+
+        <!-- Daily Spending Trend -->
+        <div class="report-card">
+            <div class="report-card-header">
+                <h3>Daily Spending (Last 30 Days)</h3>
+                <p>Your daily spending pattern over the past month</p>
+            </div>
+            <div class="chart-container">
+                <canvas id="dailyChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Monthly Spending Trend -->
+        <div class="report-card">
+            <div class="report-card-header">
+                <h3>Monthly Spending (Last 12 Months)</h3>
+                <p>Your monthly spending trend over the past year</p>
+            </div>
+            <div class="chart-container">
+                <canvas id="monthlyChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="summary-stats">
+        <div class="stat-card">
+            <span class="stat-label">Total Categories</span>
+            <span class="stat-value">{{ category_spending|length }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Top Category</span>
+            <span class="stat-value">
+                {% if category_spending %}
+                    {{ category_spending[0].category }}
+                {% else %}
+                    None
+                {% endif %}
+            </span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Avg Daily Spending</span>
+            <span class="stat-value">
+                {% if daily_spending %}
+                    ₹{{ "%.1f"|format(daily_spending|map(attribute='total')|list|sum / daily_spending|length) }}
+                {% else %}
+                    ₹0.0
+                {% endif %}
+            </span>
+        </div>
+    </div>
+</div>
+
+<script>
+// Category Pie Chart
+const categoryData = {{ category_spending|tojson }};
+const categoryChart = new Chart(document.getElementById('categoryChart'), {
+    type: 'doughnut',
+    data: {
+        labels: categoryData.map(item => item.category),
+        datasets: [{
+            data: categoryData.map(item => item.total),
+            backgroundColor: categoryData.map(item => item.color),
+            borderWidth: 2,
+            borderColor: '#ffffff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    padding: 20,
+                    usePointStyle: true
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((context.parsed / total) * 100).toFixed(1);
+                        return context.label + ': ₹' + context.parsed.toFixed(2) + ' (' + percentage + '%)';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Daily Spending Line Chart
+const dailyData = {{ daily_spending|tojson }};
+const dailyChart = new Chart(document.getElementById('dailyChart'), {
+    type: 'line',
+    data: {
+        labels: dailyData.map(item => {
+            const date = new Date(item.date);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }),
+        datasets: [{
+            label: 'Daily Spending',
+            data: dailyData.map(item => item.total),
+            borderColor: '#007bff',
+            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '₹' + value.toFixed(0);
+                    }
+                }
+            }
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return '₹' + context.parsed.y.toFixed(2);
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Monthly Spending Bar Chart
+const monthlyData = {{ monthly_spending|tojson }};
+const monthlyChart = new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: {
+        labels: monthlyData.map(item => {
+            const [year, month] = item.month.split('-');
+            const date = new Date(year, month - 1);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+        }),
+        datasets: [{
+            label: 'Monthly Spending',
+            data: monthlyData.map(item => item.total),
+            backgroundColor: '#28a745',
+            borderColor: '#28a745',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '₹' + value.toFixed(0);
+                    }
+                }
+            }
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return '₹' + context.parsed.y.toFixed(2);
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+
+<style>
+    .reports-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .reports-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .reports-header h1 {
+        font-family: var(--font-display);
+        font-size: 2.5rem;
+        color: var(--ink);
+        margin-bottom: 0.5rem;
+    }
+
+    .reports-subtitle {
+        color: var(--ink-muted);
+        font-size: 1.1rem;
+    }
+
+    .reports-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .report-card {
+        background: var(--paper-card);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        border: 1px solid var(--border-soft);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .report-card-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .report-card-header h3 {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        color: var(--ink);
+        margin-bottom: 0.5rem;
+    }
+
+    .report-card-header p {
+        color: var(--ink-muted);
+        font-size: 0.95rem;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+
+    .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .stat-card {
+        background: var(--paper-card);
+        border-radius: var(--radius-md);
+        padding: 1.5rem;
+        text-align: center;
+        border: 1px solid var(--border-soft);
+    }
+
+    .stat-label {
+        display: block;
+        color: var(--ink-muted);
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        display: block;
+        font-family: var(--font-display);
+        font-size: 1.8rem;
+        color: var(--accent);
+        font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+        .reports-container {
+            padding: 1rem;
+        }
+
+        .reports-header h1 {
+            font-size: 2rem;
+        }
+
+        .reports-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        .report-card {
+            padding: 1.5rem;
+        }
+
+        .chart-container {
+            height: 250px;
+        }
+    }
+</style>
+
+{% endblock %}
