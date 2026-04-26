@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Budgets — Spendly{% endblock %}
+
+{% block content %}
+
+<div class="budgets-container">
+    <div class="budgets-header">
+        <div>
+            <h1>Budgets</h1>
+            <p class="budgets-user">Keep spending on track with monthly limits.</p>
+        </div>
+    </div>
+
+    <div class="budget-form-card">
+        <h2>Create a Budget</h2>
+        {% if errors %}
+        <div class="form-errors">
+            <ul>
+                {% for error in errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        <form method="POST" class="budget-form">
+            <div class="form-group">
+                <label for="category_id">Category</label>
+                <select id="category_id" name="category_id">
+                    <option value="">Overall monthly budget</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="amount">Amount</label>
+                <input type="number" step="0.01" min="0" id="amount" name="amount" placeholder="Enter budget amount" required>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Save Budget</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="budget-list-card">
+        <h2>Your Budgets</h2>
+        {% if budgets %}
+        <table class="budget-table">
+            <thead>
+                <tr>
+                    <th>Budget</th>
+                    <th>Amount</th>
+                    <th>Period</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for budget in budgets %}
+                <tr>
+                    <td>
+                        {% if budget['category_name'] %}
+                        <span class="category-badge budget-category" style="background-color: {{ budget['category_color'] or '#333' }};">
+                            {{ budget['category_name'] }}
+                        </span>
+                        {% else %}
+                        Overall monthly
+                        {% endif %}
+                    </td>
+                    <td>₹{{ "%.2f"|format(budget['amount']) }}</td>
+                    <td>{{ budget['period']|capitalize }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('delete_budget', id=budget['id']) }}" onsubmit="return confirm('Delete this budget?')">
+                            <button type="submit" class="btn-row-delete">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <p class="empty-title">No budgets set</p>
+            <p class="empty-text">Create a monthly budget to get alerts when spending gets close to your limit.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .budgets-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .budgets-header {
+        margin-bottom: 2rem;
+    }
+
+    .budgets-header h1 {
+        font-family: var(--font-display);
+        font-size: 2rem;
+        color: var(--ink);
+        margin-bottom: 0.5rem;
+    }
+
+    .budgets-user {
+        color: var(--ink-muted);
+        font-size: 0.95rem;
+    }
+
+    .budget-form-card,
+    .budget-list-card {
+        background: var(--paper-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .budget-form-card h2,
+    .budget-list-card h2 {
+        margin-bottom: 1rem;
+        font-size: 1.25rem;
+        color: var(--ink);
+    }
+
+    .form-errors {
+        background: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: var(--radius-sm);
+    }
+
+    .form-errors ul {
+        margin: 0;
+        padding-left: 1.25rem;
+    }
+
+    .budget-form {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .form-group {
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        color: var(--ink-soft);
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--paper);
+        color: var(--ink);
+        font-size: 0.95rem;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .budget-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .budget-table th,
+    .budget-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border-soft);
+    }
+
+    .budget-table thead {
+        background: var(--paper-warm);
+    }
+
+    .budget-table th {
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        color: var(--ink-soft);
+        letter-spacing: 0.05em;
+    }
+
+    .budget-category {
+        color: white;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        padding: 0.35rem 0.6rem;
+        border-radius: var(--radius-sm);
+        display: inline-block;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+    }
+
+    .empty-title {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        color: var(--ink);
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-text {
+        color: var(--ink-muted);
+    }
+
+    @media (max-width: 700px) {
+        .budget-form,
+        .budget-table,
+        .form-actions {
+            width: 100%;
+        }
+
+        .budget-table th,
+        .budget-table td {
+            padding: 0.75rem;
+        }
+
+        .form-actions {
+            justify-content: stretch;
+        }
+    }
+</style>
+
+{% endblock %}

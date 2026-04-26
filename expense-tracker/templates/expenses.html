@@ -24,6 +24,14 @@
         </div>
     </div>
 
+    {% if budget_warnings %}
+    <div class="budget-warnings">
+        {% for warning in budget_warnings %}
+        <div class="alert alert-warning">{{ warning }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Filter Form -->
     <div class="filters-section">
         <form method="GET" class="filters-form">
@@ -293,6 +301,23 @@
 
     .category-uncategorized {
         background-color: var(--ink-muted);
+    }
+
+    .alert {
+        padding: 0.85rem 1rem;
+        border-radius: var(--radius-sm);
+        margin-bottom: 1rem;
+        font-size: 0.95rem;
+    }
+
+    .alert-warning {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+    }
+
+    .budget-warnings {
+        margin-bottom: 1.5rem;
     }
 
     .filters-section {

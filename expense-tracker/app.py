@@ -93,14 +93,13 @@ def expenses():
 
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
-    
+
     # Get filter parameters
     date_from = request.args.get('date_from', '').strip()
     date_to = request.args.get('date_to', '').strip()
     category_id = request.args.get('category', '').strip()
     search = request.args.get('search', '').strip()
-    
-    # Build query with filters
+
     query = """
         SELECT e.*, c.name as category_name, c.color as category_color 
         FROM expenses e 
@@ -108,7 +107,7 @@ def expenses():
         WHERE e.user_id = ?
     """
     params = [session["user_id"]]
-    
+
     if date_from:
         query += " AND e.date >= ?"
         params.append(date_from)
@@ -121,22 +120,137 @@ def expenses():
     if search:
         query += " AND e.description LIKE ?"
         params.append(f"%{search}%")
-    
+
     query += " ORDER BY e.date DESC"
-    
     expenses_list = db.execute(query, params).fetchall()
     categories = db.execute("SELECT * FROM categories ORDER BY name").fetchall()
+
+    # Budget warnings for this month
+    current_month = datetime.now().strftime('%Y-%m')
+    month_total_row = db.execute(
+        "SELECT SUM(amount) as total FROM expenses WHERE user_id = ? AND strftime('%Y-%m', date) = ?",
+        (session['user_id'], current_month)
+    ).fetchone()
+    month_total = month_total_row['total'] or 0
+
+    budgets = db.execute(
+        "SELECT b.*, c.name AS category_name FROM budgets b LEFT JOIN categories c ON b.category_id = c.id WHERE b.user_id = ?",
+        (session['user_id'],)
+    ).fetchall()
+
+    budget_warnings = []
+    for budget in budgets:
+        budget_amount = budget['amount']
+        budget_label = budget['category_name'] or 'Overall monthly'
+
+        if budget['category_id'] is None:
+            current_value = month_total
+        else:
+            category_row = db.execute(
+                "SELECT SUM(amount) as total FROM expenses WHERE user_id = ? AND category_id = ? AND strftime('%Y-%m', date) = ?",
+                (session['user_id'], budget['category_id'], current_month)
+            ).fetchone()
+            current_value = category_row['total'] or 0
+
+        if current_value >= budget_amount:
+            budget_warnings.append(
+                f"Budget exceeded for {budget_label}: ₹{current_value:.2f} / ₹{budget_amount:.2f}."
+            )
+        elif current_value >= budget_amount * 0.9:
+            budget_warnings.append(
+                f"Approaching budget for {budget_label}: ₹{current_value:.2f} / ₹{budget_amount:.2f}."
+            )
+
     db.close()
 
     if not user:
         session.clear()
         return redirect(url_for("login"))
 
-    # Calculate total spending
     total_spent = sum(exp["amount"] for exp in expenses_list)
 
-    return render_template("expenses.html", user=user, expenses=expenses_list, 
-                         total_spent=total_spent, categories=categories)
+    return render_template("expenses.html", user=user, expenses=expenses_list,
+                         total_spent=total_spent, categories=categories,
+                         budget_warnings=budget_warnings)
+
+
+@app.route("/expenses/<int:id>/delete", methods=["POST"])
+def delete_expense(id):
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    db = get_db()
+    expense = db.execute("SELECT * FROM expenses WHERE id = ? AND user_id = ?",
+                        (id, session["user_id"])).fetchone()
+
+    if expense:
+        db.execute("DELETE FROM expenses WHERE id = ?", (id,))
+        db.commit()
+
+    db.close()
+    return redirect(url_for("expenses"))
+
+
+@app.route("/budgets", methods=["GET", "POST"])
+def budgets():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+    categories = db.execute("SELECT * FROM categories ORDER BY name").fetchall()
+    errors = []
+
+    if request.method == "POST":
+        amount = request.form.get('amount', '').strip()
+        category_id = request.form.get('category_id', '').strip()
+
+        if not amount:
+            errors.append('Budget amount is required')
+        else:
+            try:
+                amount = float(amount)
+                if amount <= 0:
+                    errors.append('Budget must be greater than 0')
+            except ValueError:
+                errors.append('Budget must be a valid number')
+
+        if category_id:
+            try:
+                category_id = int(category_id)
+            except ValueError:
+                errors.append('Invalid category selection')
+        else:
+            category_id = None
+
+        if not errors:
+            db.execute(
+                "INSERT INTO budgets (user_id, category_id, amount, period) VALUES (?, ?, ?, ?)",
+                (session['user_id'], category_id, amount, 'monthly')
+            )
+            db.commit()
+            db.close()
+            return redirect(url_for('budgets'))
+
+    budgets_list = db.execute(
+        "SELECT b.*, c.name AS category_name, c.color AS category_color FROM budgets b LEFT JOIN categories c ON b.category_id = c.id WHERE b.user_id = ? ORDER BY b.category_id IS NULL, c.name",
+        (session['user_id'],)
+    ).fetchall()
+    db.close()
+
+    return render_template('budgets.html', user=user, categories=categories, budgets=budgets_list, errors=errors)
+
+
+@app.route("/budgets/<int:id>/delete", methods=["POST"])
+def delete_budget(id):
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    db = get_db()
+    db.execute("DELETE FROM budgets WHERE id = ? AND user_id = ?", (id, session['user_id']))
+    db.commit()
+    db.close()
+    return redirect(url_for('budgets'))
 
 
 @app.route("/expenses/add", methods=["GET", "POST"])

@@ -37,9 +37,25 @@ def init_db():
             FOREIGN KEY (category_id) REFERENCES categories (id)
         )
     ''')
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS budgets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            category_id INTEGER,
+            amount REAL NOT NULL,
+            period TEXT NOT NULL DEFAULT 'monthly',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            FOREIGN KEY (category_id) REFERENCES categories (id)
+        )
+    ''')
     # Add category_id column if it doesn't exist (for migration)
     try:
         db.execute("ALTER TABLE expenses ADD COLUMN category_id INTEGER REFERENCES categories (id)")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    try:
+        db.execute("ALTER TABLE budgets ADD COLUMN period TEXT DEFAULT 'monthly'")
     except sqlite3.OperationalError:
         pass  # Column already exists
     db.commit()
@@ -72,5 +88,9 @@ def seed_db():
     # Insert sample expenses
     db.execute("INSERT OR IGNORE INTO expenses (user_id, category_id, amount, description, date) VALUES (?, ?, ?, ?, ?)", (user_id, food_id, 50.0, 'Coffee', '2023-10-01'))
     db.execute("INSERT OR IGNORE INTO expenses (user_id, category_id, amount, description, date) VALUES (?, ?, ?, ?, ?)", (user_id, transport_id, 20.0, 'Bus ticket', '2023-10-02'))
+    
+    # Insert sample budgets
+    db.execute("INSERT OR IGNORE INTO budgets (user_id, category_id, amount, period) VALUES (?, ?, ?, ?)", (user_id, None, 1500.0, 'monthly'))
+    db.execute("INSERT OR IGNORE INTO budgets (user_id, category_id, amount, period) VALUES (?, ?, ?, ?)", (user_id, food_id, 500.0, 'monthly'))
     db.commit()
     db.close()
