@@ -15,7 +15,8 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL
+            password_hash TEXT NOT NULL,
+            avatar TEXT DEFAULT 'avatars/avatar1.svg'
         )
     ''')
     db.execute('''
@@ -56,6 +57,10 @@ def init_db():
         pass  # Column already exists
     try:
         db.execute("ALTER TABLE budgets ADD COLUMN period TEXT DEFAULT 'monthly'")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT 'avatars/avatar1.svg'")
     except sqlite3.OperationalError:
         pass  # Column already exists
     db.commit()

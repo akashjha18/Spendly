@@ -7,25 +7,471 @@
 <div class="profile-container">
     <div class="profile-card">
         <div class="profile-header">
-            <h1>Welcome, {{ user['name'] }}!</h1>
-            <p class="profile-email">{{ user['email'] }}</p>
+            <h1>Profile Settings</h1>
+            <p>Manage your account and preferences</p>
         </div>
 
-        <div class="profile-info">
-            <div class="info-row">
-                <span class="info-label">Name:</span>
-                <span class="info-value">{{ user['name'] }}</span>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="toast-list">
+                {% for category, message in messages %}
+                <div class="toast toast-{{ category }}">{{ message }}</div>
+                {% endfor %}
             </div>
-            <div class="info-row">
-                <span class="info-label">Email:</span>
-                <span class="info-value">{{ user['email'] }}</span>
+            {% endif %}
+        {% endwith %}
+
+        {% if errors %}
+        <div class="form-errors">
+            <ul>
+                {% for error in errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if password_errors %}
+        <div class="form-errors">
+            <ul>
+                {% for error in password_errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="profile-summary">
+            <div class="details-row">
+                <span class="details-label">Name</span>
+                <span class="details-value">{{ user['name'] }}</span>
             </div>
+            <div class="details-row">
+                <span class="details-label">Email</span>
+                <span class="details-value">{{ user['email'] }}</span>
+            </div>
+            <div class="summary-actions">
+                <button type="button" class="btn-secondary" id="edit-profile-btn">Edit Profile</button>
+                <button type="button" class="btn-secondary" id="change-password-btn">Change Password</button>
+                <button type="button" class="btn-secondary" id="preferences-btn">Preferences</button>
+            </div>
+        </div>
+
+        {% if errors %}
+        <div class="form-errors">
+            <ul>
+                {% for error in avatar_errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div id="edit-profile-section" class="profile-section{% if not show_profile_form %} hidden{% endif %}">
+            <h2>Edit Profile</h2>
+            <form method="POST" class="profile-form">
+                <input type="hidden" name="action" value="update_profile">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" name="name" value="{{ name or user['name'] }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" value="{{ email or user['email'] }}" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="change-password-section" class="profile-section{% if not show_password_form %} hidden{% endif %}">
+            <h2>Change Password</h2>
+            <form method="POST" class="profile-form">
+                <input type="hidden" name="action" value="change_password">
+                <div class="form-group">
+                    <label for="current_password">Current Password</label>
+                    <input type="password" id="current_password" name="current_password" required>
+                </div>
+                <div class="form-group">
+                    <label for="new_password">New Password</label>
+                    <input type="password" id="new_password" name="new_password" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirm_password">Confirm New Password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Change Password</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="preferences-section" class="profile-section{% if not show_preferences_form %} hidden{% endif %}">
+            <h2>Preferences</h2>
+            <form method="POST" class="profile-form">
+                <input type="hidden" name="action" value="update_preferences">
+                <div class="form-group">
+                    <label for="currency">Currency Symbol</label>
+                    <select id="currency" name="currency">
+                        <option value="₹" {% if session.get('currency') == '₹' %}selected{% endif %}>₹ (INR)</option>
+                        <option value="$" {% if session.get('currency') == '$' %}selected{% endif %}>$ (USD)</option>
+                        <option value="€" {% if session.get('currency') == '€' %}selected{% endif %}>€ (EUR)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="date_format">Date Format</label>
+                    <select id="date_format" name="date_format">
+                        <option value="YYYY-MM-DD" {% if session.get('date_format') == 'YYYY-MM-DD' %}selected{% endif %}>YYYY-MM-DD</option>
+                        <option value="DD/MM/YYYY" {% if session.get('date_format') == 'DD/MM/YYYY' %}selected{% endif %}>DD/MM/YYYY</option>
+                        <option value="MM/DD/YYYY" {% if session.get('date_format') == 'MM/DD/YYYY' %}selected{% endif %}>MM/DD/YYYY</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save Preferences</button>
+                </div>
+            </form>
+        </div>
+
+        <script>
+            const editBtn = document.getElementById('edit-profile-btn');
+            const passBtn = document.getElementById('change-password-btn');
+            const prefBtn = document.getElementById('preferences-btn');
+            const profileSection = document.getElementById('edit-profile-section');
+            const passwordSection = document.getElementById('change-password-section');
+            const preferencesSection = document.getElementById('preferences-section');
+
+            function hideAll() {
+                profileSection.classList.add('hidden');
+                passwordSection.classList.add('hidden');
+                preferencesSection.classList.add('hidden');
+            }
+
+            if (editBtn) {
+                editBtn.addEventListener('click', () => {
+                    hideAll();
+                    profileSection.classList.toggle('hidden');
+                });
+            }
+            if (passBtn) {
+                passBtn.addEventListener('click', () => {
+                    hideAll();
+                    passwordSection.classList.toggle('hidden');
+                });
+            }
+            if (prefBtn) {
+                prefBtn.addEventListener('click', () => {
+                    hideAll();
+                    preferencesSection.classList.toggle('hidden');
+                });
+            }
+        </script>
+
+        <!-- Account Statistics -->
+        <div class="profile-section">
+            <h2>Account Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-value">{{ stats.total_expenses_count }}</span>
+                    <span class="stat-label">Total Expenses</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">₹{{ "%.2f"|format(stats.total_expenses_amount) }}</span>
+                    <span class="stat-label">Total Spent</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">{{ stats.total_budgets }}</span>
+                    <span class="stat-label">Budgets Set</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">{{ stats.total_categories }}</span>
+                    <span class="stat-label">Categories Used</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Export -->
+        <div class="profile-section">
+            <h2>Data Export</h2>
+            <p>Download your expenses and budgets data as JSON.</p>
+            <a href="{{ url_for('export_data') }}" class="btn-primary">Export Data</a>
+        </div>
+
+        <!-- Account Deletion -->
+        <div class="profile-section danger">
+            <h2>Delete Account</h2>
+            <p>This will permanently delete your account and all associated data. This action cannot be undone.</p>
+            <form method="POST" action="{{ url_for('delete_account') }}" onsubmit="return confirm('Are you sure you want to delete your account? This cannot be undone.')">
+                <button type="submit" class="btn-danger">Delete Account</button>
+            </form>
         </div>
 
         <div class="profile-actions">
-            <a href="{{ url_for('logout') }}" class="btn-danger">Logout</a>
+            <a href="{{ url_for('logout') }}" class="btn-secondary">Logout</a>
         </div>
     </div>
 </div>
+
+<style>
+    .profile-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .profile-card {
+        background: var(--paper-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 2rem;
+    }
+
+    .profile-header h1 {
+        font-family: var(--font-display);
+        font-size: 1.75rem;
+        color: var(--ink);
+        margin-bottom: 0.5rem;
+    }
+
+    .profile-header p {
+        color: var(--ink-muted);
+        margin-bottom: 2rem;
+    }
+
+    .profile-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid var(--border-soft);
+    }
+
+    .profile-summary {
+        background: var(--paper-warm);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-sm);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .details-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .details-label {
+        font-weight: 600;
+        color: var(--ink-soft);
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+    }
+
+    .details-value {
+        color: var(--ink);
+        font-weight: 600;
+    }
+
+    .summary-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .toast-list {
+        margin-bottom: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .toast {
+        padding: 0.95rem 1rem;
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        border: 1px solid transparent;
+    }
+
+    .toast-success {
+        background: #e9f7ef;
+        border-color: #c8e6d9;
+        color: #1f6f47;
+    }
+
+    .toast-error {
+        background: #fdecea;
+        border-color: #f5c6cb;
+        color: #981b1e;
+    }
+
+    .form-group small {
+        color: var(--ink-muted);
+        display: block;
+        margin-top: 0.35rem;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    .profile-section:last-child {
+        border-bottom: none;
+    }
+
+    .profile-section h2 {
+        font-size: 1.25rem;
+        color: var(--ink);
+        margin-bottom: 1rem;
+    }
+
+    .profile-section.danger {
+        border-color: var(--danger-light);
+        background: rgba(220, 53, 69, 0.05);
+        padding: 1.5rem;
+        border-radius: var(--radius-sm);
+    }
+
+    .form-errors {
+        background: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: var(--radius-sm);
+    }
+
+    .form-errors ul {
+        margin: 0;
+        padding-left: 1.25rem;
+    }
+
+    .profile-form {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .form-group {
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        color: var(--ink-soft);
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--paper);
+        color: var(--ink);
+        font-size: 0.95rem;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+
+    .stat-card {
+        background: var(--paper-warm);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-sm);
+        padding: 1.5rem;
+        text-align: center;
+    }
+
+    .stat-value {
+        display: block;
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        color: var(--accent);
+        font-weight: 600;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: var(--ink-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .profile-actions {
+        text-align: center;
+        margin-top: 2rem;
+    }
+
+    .btn-primary {
+        padding: 0.75rem 1.5rem;
+        background: var(--accent);
+        color: var(--paper);
+        border: none;
+        border-radius: var(--radius-sm);
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-primary:hover {
+        background: var(--accent-dark);
+    }
+
+    .btn-secondary {
+        padding: 0.75rem 1.5rem;
+        background: transparent;
+        color: var(--ink-muted);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .btn-secondary:hover {
+        background: var(--paper-warm);
+    }
+
+    .btn-danger {
+        padding: 0.75rem 1.5rem;
+        background: var(--danger);
+        color: var(--paper);
+        border: none;
+        border-radius: var(--radius-sm);
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    .btn-danger:hover {
+        background: var(--danger-dark);
+    }
+
+    @media (max-width: 600px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .form-actions {
+            justify-content: stretch;
+        }
+    }
+</style>
 
 {% endblock %}
