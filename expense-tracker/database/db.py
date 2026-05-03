@@ -63,6 +63,38 @@ def init_db():
         db.execute("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT 'avatars/avatar1.svg'")
     except sqlite3.OperationalError:
         pass  # Column already exists
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN notification_email_budget INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN notification_email_unusual INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN budget_alert_50 INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN budget_alert_75 INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN budget_alert_100 INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN favorite_categories TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN default_report_type TEXT DEFAULT 'monthly'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        db.execute("ALTER TABLE users ADD COLUMN default_report_frequency TEXT DEFAULT 'monthly'")
+    except sqlite3.OperationalError:
+        pass
     db.commit()
     db.close()
 

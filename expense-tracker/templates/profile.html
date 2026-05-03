@@ -54,6 +54,10 @@
                 <button type="button" class="btn-secondary" id="edit-profile-btn">Edit Profile</button>
                 <button type="button" class="btn-secondary" id="change-password-btn">Change Password</button>
                 <button type="button" class="btn-secondary" id="preferences-btn">Preferences</button>
+                <button type="button" class="btn-secondary" id="notifications-btn">Notifications</button>
+                <button type="button" class="btn-secondary" id="budget-alerts-btn">Budget Alerts</button>
+                <button type="button" class="btn-secondary" id="categories-btn">Categories</button>
+                <button type="button" class="btn-secondary" id="report-prefs-btn">Report Settings</button>
             </div>
         </div>
 
@@ -133,18 +137,131 @@
             </form>
         </div>
 
+        <div id="notifications-section" class="profile-section hidden">
+            <h2>Notification Settings</h2>
+            <form method="POST" class="profile-form">
+                <input type="hidden" name="action" value="update_notifications">
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="email_budget" {% if user['notification_email_budget'] %}checked{% endif %}>
+                        Email alerts for budget warnings
+                    </label>
+                    <small>Get notified when you're approaching budget limits</small>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="email_unusual" {% if user['notification_email_unusual'] %}checked{% endif %}>
+                        Email alerts for unusual spending
+                    </label>
+                    <small>Get notified when spending patterns change significantly</small>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save Settings</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="budget-alerts-section" class="profile-section hidden">
+            <h2>Budget Alert Thresholds</h2>
+            <form method="POST" class="profile-form">
+                <input type="hidden" name="action" value="update_budget_alerts">
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="alert_50" {% if user['budget_alert_50'] %}checked{% endif %}>
+                        Alert at 50% of budget
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="alert_75" {% if user['budget_alert_75'] %}checked{% endif %}>
+                        Alert at 75% of budget
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="alert_100" {% if user['budget_alert_100'] %}checked{% endif %}>
+                        Alert at 100% of budget (budget exceeded)
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save Settings</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="categories-section" class="profile-section hidden">
+            <h2>Default Categories</h2>
+            <p class="section-description">Select your favorite or most frequently used categories</p>
+            <form method="POST" class="profile-form">
+                <input type="hidden" name="action" value="update_default_categories">
+                <div class="form-group categories-grid">
+                    {% for category in all_categories %}
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="favorite_categories" value="{{ category['id'] }}" 
+                            {% if category['id']|string in favorite_cat_ids %}checked{% endif %}>
+                        <span class="category-name" style="border-left: 4px solid {{ category['color'] }}; padding-left: 8px;">{{ category['name'] }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save Categories</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="report-prefs-section" class="profile-section hidden">
+            <h2>Report Preferences</h2>
+            <form method="POST" class="profile-form">
+                <input type="hidden" name="action" value="update_report_preferences">
+                <div class="form-group">
+                    <label for="report_type">Default Report Type</label>
+                    <select id="report_type" name="report_type" required>
+                        <option value="daily" {% if user['default_report_type'] == 'daily' %}selected{% endif %}>Daily</option>
+                        <option value="weekly" {% if user['default_report_type'] == 'weekly' %}selected{% endif %}>Weekly</option>
+                        <option value="monthly" {% if user['default_report_type'] == 'monthly' %}selected{% endif %}>Monthly</option>
+                        <option value="yearly" {% if user['default_report_type'] == 'yearly' %}selected{% endif %}>Yearly</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="report_frequency">Report Frequency</label>
+                    <select id="report_frequency" name="report_frequency" required>
+                        <option value="never" {% if user['default_report_frequency'] == 'never' %}selected{% endif %}>Never (Manual)</option>
+                        <option value="daily" {% if user['default_report_frequency'] == 'daily' %}selected{% endif %}>Daily</option>
+                        <option value="weekly" {% if user['default_report_frequency'] == 'weekly' %}selected{% endif %}>Weekly</option>
+                        <option value="monthly" {% if user['default_report_frequency'] == 'monthly' %}selected{% endif %}>Monthly</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save Preferences</button>
+                </div>
+            </form>
+        </div>
+
         <script>
             const editBtn = document.getElementById('edit-profile-btn');
             const passBtn = document.getElementById('change-password-btn');
             const prefBtn = document.getElementById('preferences-btn');
+            const notificationsBtn = document.getElementById('notifications-btn');
+            const budgetAlertsBtn = document.getElementById('budget-alerts-btn');
+            const categoriesBtn = document.getElementById('categories-btn');
+            const reportPrefsBtn = document.getElementById('report-prefs-btn');
+            
             const profileSection = document.getElementById('edit-profile-section');
             const passwordSection = document.getElementById('change-password-section');
             const preferencesSection = document.getElementById('preferences-section');
+            const notificationsSection = document.getElementById('notifications-section');
+            const budgetAlertsSection = document.getElementById('budget-alerts-section');
+            const categoriesSection = document.getElementById('categories-section');
+            const reportPrefsSection = document.getElementById('report-prefs-section');
 
             function hideAll() {
                 profileSection.classList.add('hidden');
                 passwordSection.classList.add('hidden');
                 preferencesSection.classList.add('hidden');
+                notificationsSection.classList.add('hidden');
+                budgetAlertsSection.classList.add('hidden');
+                categoriesSection.classList.add('hidden');
+                reportPrefsSection.classList.add('hidden');
             }
 
             if (editBtn) {
@@ -163,6 +280,30 @@
                 prefBtn.addEventListener('click', () => {
                     hideAll();
                     preferencesSection.classList.toggle('hidden');
+                });
+            }
+            if (notificationsBtn) {
+                notificationsBtn.addEventListener('click', () => {
+                    hideAll();
+                    notificationsSection.classList.toggle('hidden');
+                });
+            }
+            if (budgetAlertsBtn) {
+                budgetAlertsBtn.addEventListener('click', () => {
+                    hideAll();
+                    budgetAlertsSection.classList.toggle('hidden');
+                });
+            }
+            if (categoriesBtn) {
+                categoriesBtn.addEventListener('click', () => {
+                    hideAll();
+                    categoriesSection.classList.toggle('hidden');
+                });
+            }
+            if (reportPrefsBtn) {
+                reportPrefsBtn.addEventListener('click', () => {
+                    hideAll();
+                    reportPrefsSection.classList.toggle('hidden');
                 });
             }
         </script>
@@ -463,6 +604,67 @@
         background: var(--danger-dark);
     }
 
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: var(--accent);
+    }
+
+    .checkbox-label small {
+        display: block;
+        font-size: 0.85rem;
+        color: var(--ink-soft);
+        font-weight: 400;
+        margin-top: 0.25rem;
+    }
+
+    .section-description {
+        color: var(--ink-muted);
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+    }
+
+    .categories-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .categories-grid .checkbox-label {
+        padding: 1rem;
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius-sm);
+        background: var(--paper);
+        transition: border-color 0.2s, background-color 0.2s;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .categories-grid .checkbox-label:hover {
+        border-color: var(--accent);
+        background: var(--paper-warm);
+    }
+
+    .categories-grid .checkbox-label input[type="checkbox"]:checked {
+        background-color: var(--accent);
+    }
+
+    .category-name {
+        width: 100%;
+        word-break: break-word;
+    }
+
     @media (max-width: 600px) {
         .stats-grid {
             grid-template-columns: 1fr;
@@ -470,6 +672,10 @@
 
         .form-actions {
             justify-content: stretch;
+        }
+
+        .categories-grid {
+            grid-template-columns: 1fr;
         }
     }
 </style>

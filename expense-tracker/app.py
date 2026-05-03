@@ -1,5 +1,6 @@
 import os
 
+import json
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import get_db, init_db, seed_db
@@ -163,11 +164,82 @@ def profile():
             db.close()
             return redirect(url_for("profile"))
 
+        elif action == "update_notifications":
+            email_budget = 1 if request.form.get("email_budget") else 0
+            email_unusual = 1 if request.form.get("email_unusual") else 0
+            
+            db.execute(
+                "UPDATE users SET notification_email_budget = ?, notification_email_unusual = ? WHERE id = ?",
+                (email_budget, email_unusual, session["user_id"])
+            )
+            db.commit()
+            flash("Notification settings updated successfully.", "success")
+            db.close()
+            return redirect(url_for("profile"))
+
+        elif action == "update_budget_alerts":
+            alert_50 = 1 if request.form.get("alert_50") else 0
+            alert_75 = 1 if request.form.get("alert_75") else 0
+            alert_100 = 1 if request.form.get("alert_100") else 0
+            
+            db.execute(
+                "UPDATE users SET budget_alert_50 = ?, budget_alert_75 = ?, budget_alert_100 = ? WHERE id = ?",
+                (alert_50, alert_75, alert_100, session["user_id"])
+            )
+            db.commit()
+            flash("Budget alert settings updated successfully.", "success")
+            db.close()
+            return redirect(url_for("profile"))
+
+        elif action == "update_default_categories":
+            favorite_categories = request.form.getlist("favorite_categories")
+            favorite_categories_str = json.dumps(favorite_categories)
+            
+            db.execute(
+                "UPDATE users SET favorite_categories = ? WHERE id = ?",
+                (favorite_categories_str, session["user_id"])
+            )
+            db.commit()
+            flash("Default categories updated successfully.", "success")
+            db.close()
+            return redirect(url_for("profile"))
+
+        elif action == "update_report_preferences":
+            report_type = request.form.get("report_type", "monthly")
+            report_frequency = request.form.get("report_frequency", "monthly")
+            
+            db.execute(
+                "UPDATE users SET default_report_type = ?, default_report_frequency = ? WHERE id = ?",
+                (report_type, report_frequency, session["user_id"])
+            )
+            db.commit()
+            flash("Report preferences updated successfully.", "success")
+            db.close()
+            return redirect(url_for("profile"))
+
     db.close()
+    
+    # Get all categories for the categories preference form
+    db = get_db()
+    all_categories = db.execute("SELECT id, name, color FROM categories").fetchall()
+    
+    # Parse favorite categories from JSON
+    favorite_categories = user["favorite_categories"] if user["favorite_categories"] else ""
+    favorite_cat_ids = set()
+    if favorite_categories:
+        try:
+            favorite_cat_ids = set(json.loads(favorite_categories))
+        except (json.JSONDecodeError, TypeError):
+            favorite_cat_ids = set()
+    
+    db.close()
+    
     return render_template("profile.html", user=user, stats=stats,
                            show_profile_form=show_profile_form,
                            show_password_form=show_password_form,
-                           show_preferences_form=show_preferences_form)
+                           show_preferences_form=show_preferences_form,
+                           all_categories=all_categories,
+                           favorite_cat_ids=favorite_cat_ids)
 
 
 @app.route("/export")
